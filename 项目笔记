@@ -1,0 +1,359 @@
+2023/11/24
+知乎日报App                                                                                                                      2023.11-2023.12
+应用技术：React + JavaScript + redux/react-redux + react-router-dom + axios + styled-components + Less + antd-mobile
+项目描述：本项目通过React框架进行开发，基于知乎日报的API实现，项目主要实现了首页、详情页、登录页、个人中心页、修改个人信息页以及收藏页等页面的搭建与数据处理，可以让用户阅读知乎日报的新闻内容。
+主要工作：1）实现响应式布局，对UI组件库中组件进行二次封装，并封装一些常用方法。
+@ 设置插件 postcss-pxtorem
+@ 导入lib-flexible （手动设置最大宽度）
+@ babel-plugin-styled-conponents-px2rem
+
+按钮组件二次封装（防抖 避免重复提交）：定义一个状态用于跟踪按钮是否处于加载状态，定义一个 clickHandle 异步函数来处理按钮的点击事件
+点击按钮时，将按钮设置为加载状态，使其在处理函数执行完毕之前不可再次点击。
+如果传了点击事件，执行点击事件时，无论成功与否，最终都会重置加载状态，使按钮恢复可点击状态。
+
+导航组件（自定义返回逻辑）：通过 useNavigate 和 useSearchParams 钩子，获取路由信息根据查询参数执行不同的返回按钮的逻辑。
+
+方法：
+具备有效期的LocalStorage存储：数据存为json对象time和value，然后将获取到的数据解析成 JSON 对象，如果没有找到数据，返回 null。如果数据存在，检查当前时间与存储时间的差值是否大于 cycle。
+如果数据已经过期，调用 storage.remove(key) 删除数据并返回 null。如果数据未过期，返回存储的值 value。
+日期格式化工具：正则 将时间输出为想要的格式
+
+2）实现登录态规则校验，以及根据用户进入登录页的不同情况处理页面跳转。
+登录态规则校验：router中实现
+首先分析是否需要做检验
+如果需要校验，则异步派发 queryLoginInfo action，从服务器获取用户的登录信息。
+根据异步请求的结果，决定是继续渲染目标组件还是跳转到登录页面。
+   登录：直接进入对应的组件
+   没有登录：跳转到登录页 ?to目标路由
+
+进入登录页的不同情况：（业务逻辑）
+情况一：手动输入 /#/logn地址  回到首页{push} 或者返回上一页
+情况二：打算进入个人中心/我的收藏/修改个人信息 
+           登录校验 
+           没有登录会先跳转到登录页[通过/？to=/xxx 传真实地址] 
+           登陆成功后要回到个人中心/...{replace}[获取to参数]
+情况三：在新闻详情页点击收藏时 
+           首先获取是否登录
+           已登录：收藏 
+           没有登陆：提示&跳转登录页[replace][/login?to=/detail/xxx] 
+           登录成功后获取to值跳转详情页{replace} 
+
+3）实现触底加载、并使用keepAlive和lazy函数实现了组件缓存和路由懒加载，优化项目性能。
+触底加载：监听 loadBox 元素（即加载更多的容器），当 loadBox 元素进入视口（即用户滚动到页面底部）时，
+调用 queryMoreData 函数来加载下一页的新闻数据，
+通过样式控制 loadBox 元素的显示与隐藏，当 newsList 中有数据时才显示“数据加载中”的提示和加载动画。
+手动设置的监听器 组件释放时 react内部不会移除 要手动移除
+
+正常情况下 每一次路由跳转 都是原有组件释放 新组件加载的过程
+做了缓存的组件：1.每次路由跳转的时候 组件不销毁 2.再次跳转回来 直接渲染即可
+keepAlive：获取组件的真实dom、把相关信息存储到上下文中，每一次路由切换完毕，首先看上下文中，是否有当前组件的缓存信息
+lazy函数：按需加载
+
+4）使用Redux管理应用状态，引入全局状态管理机制，实现夜间模式切换，提升体验。
+
+项目难点/遇到的问题：
+Detail中的数据和样式都是获取到的 
+.img-place-holder 大图这里需要手动获取动态绑定的DOM元素 所以要确保setInfo(result)是同步的
+在状态更新后立即获取 .img-place-holder 元素，以确保图片加载时的正确处理。
+先执行handleStyle(result)再更新视图
+使用 flushSync 确保状态更新后立即执行必要的样式和图片处理，保证能拿到这个dom元素imgPlaceHolder，避免因为异步更新导致的页面渲染问题。
+状态修改是异步的批处理 flushSync是让状态更新队列立马执行
+
+
+#技术栈
+后端技术栈:Node、express
+数据存储:json[mongodb\MySOL]
+启动后端：【这块先不管了先把页面做出来】
+跑环境
+修改后端服务配置项
+api.txt
+code.txt
+
+前端：
+creat-react-app
+React18
+redux/react-redux
+react-router-dom v6
+fetch
+css-in-js(styled-conponents)
+less
+AnTdMobile
+
+#需要实现的功能
+首页 标题 显示头像 轮播图 可以触底加载的列表
+详情页 列表点进去显示详情 可以评论 点赞 收藏
+个人中心页
+修改个人信息页
+收藏页 我的收藏列表
+登录页
+404页面
+
+#实现过程
+## 从零开始构建
+基于creat-react-app创建工程化项目 npm i create-react-app -g
+暴露webpack配置项 yarn eject
+修改脚手架默认的配置
+  配置less less/less-loader@8
+  配置别名
+  配置浏览器兼容 browserslist
+  配置客户端启动服务的信息
+  配置跨域代理 http-proxy-middleware
+  配置rem响应式布局的处理:lib-flexible\postcss-pxtorem
+  配置打包优化
+
+## 准备
+http.js fetch请求的二次封装
+清除浏览器默认样式rest.min.css
+utils.js 自己封装的方法库
+
+## 配置好响应式布局&&样式处理
+一定设置这个：<meta name='viewport' content='width=device-width,initial-scale=1.0,maxinum-scale=1,mininum-scale,user-scalable=no'>
+### 手动 remdemo
+### 自动
+* lib-flexible 设置换算比例
+750设计稿 1rem=75px;
+* postcss-pxtorem 
+-----------
+@ 设置插件
+const px2rem = require('postcss-pxtorem')
+ px2rem({
+  rootValue:75,
+  propsList:['*'] //对所有文件的样式都生效
+ })
+@ 在入口出导入lib-flexible 
+（手动设置:超过750px就不让rem比例继续变大）
+@ 如果我们采用css in js样式私有化的思想 并且应用的是styled-components插件处理的 我们需要把js中写的样式 也实现px2rem
+【babel-plugin-styled-conponents-px2rem】 安装 配置
+
+## 配置路由管理
+### /views 页面
+/ 首页 
+/detail/:id  详情页
+/personal 个人中心
+/login 登陆注册
+/store 我的收藏
+/update 修改个人信息
+404页面
+（路由 选项卡 
+### App.js 视图/页面入口 放路由渲染的内容
+### index.js 程序入门
+### /router
+routes.js 搭路由表
+index.js 搭RouterView
+
+## 配置redux架子
+/store 
+index.js 创建store
+action-type 统一管理派发行为标识
+
+/store/reducer
+index.js 合并reducer
+base.js 个人信息
+store.js 收藏列表
+
+/store/action 处理各个板块下的action
+index.js 合并action
+base.js 记录要派发的东西
+store.js
+
+## 请求接口骨架
+/api
+http.js fetch的二次封装
+index.js 接口比较少 不分模块了
+
+## 基础框架配置
+
+## 逐一开发项目 
+注意组件的抽离封装
+发现公用性 拆 合并渲染
+###公共组件
+把首页头拆出来
+把列表拆出来
+
+###首页
+头：两半
+轮播图:UI组件
+新闻列表：
+每条新闻：内容：标题 作者  
+         图片
+  今天的新闻
+  触底加载之前的新闻
+
+##组件的缓存机制
+正常情况下 每一次路由跳转 都是原有组件释放 新组件加载的过程
+我们有些需求：是需要对某些组件做缓存的：
+做了缓存的组件：
+1.每次路由跳转的时候 组件不销毁
+2.再次跳转回来 直接渲染即可
+组件的缓存机制 keepAlive 【和网络中无关】
+vue框架中默认写好了<keep-alive>这样的处理机制 react中需要自己实现
+
+主流思想上：
+1.不是标准的组件缓存 只是数据缓存
+  A->B 在A路由跳转的时候 把A组件需要的数据或A组件的全部虚拟DOM 存储到redux中
+  A组件释放 B组件加载
+  当回到A时 A开始加载 先判断redux中是否存储了数据或者虚拟DOM 
+
+2.修改路由的跳转机制
+在路由跳转的时候 不销毁指定组件 只是控制display：none隐藏 返回时再block显示
+
+3. 把A组件的真实dom等信息直接缓存起来 返回时直接拿缓存信息出来 keepalive组件
+keepaliveprovider:创建一个上下文对象：实时存储最新缓存的组件的信息=>组件有变化，实时更新上下文的缓存信息【真实dom】
+主要做事情：获取home组件的真实dom、把相关信息存储到上下文中
+每一次路由切换完毕，首先看上下文中，是否有当前组件的缓存信息
+
+
+##详情页
+大图
+文章内容
+安全区 先不管了
+返回 | 评论、点赞、收藏、转发按钮【固定定位
+还有一些细节需要完善：收藏 取消收藏 登录后收藏
+
+引入原本的样式 修改错误的样式
+//结构 样式 内容
+  
+##登录页
+手机号：
+    手机号规则校验
+      防止非必要的请求
+      防止SQL注入
+    向服务器发送请求 传递手机号
+
+    服务器端：
+    手机号格式再次校验
+    创建一个验证码
+      存储一个数据库中 格式：手机号/验证码 方便后期登录校验
+      编辑短信内容
+    调用第三方平台 短信发给用户
+
+    客户端:接收服务器返回的内容 
+      失败：提示
+      成功：开启倒计时
+      
+验证码：
+
+提交：
+  1.表单检验
+  2.向服务器发送请求
+  服务器端：获取传输的内容
+    1. 再次格式校验
+    2. 去数据库中进行匹配 检查是否一致
+       + 失败:返回登陆失败
+       + 成功：【手机号快捷登录】
+       @1 首先看手机号是否被注册过
+           + 没注册过：注册+登录
+           + 注册过：登录
+       @2 服务器端需要生成一个token值
+       基于JWT(json web token)算法 根据登录信息+时间+密钥创建一个token出来
+       @3 向客户端返回信息
+       信息中一定有token
+    3. 客户端接收服务器返回的结果
+    + 失败:提示
+    + 成功:提示+跳转【细节】
+          存储token 方便后续请求需要基于请求主体 把token传递给服务器  具备有效期的localStorage
+          获取登陆信息 存储到redux 方便做登录态检验
+
+###进入登录页情况
+情况一：手动输入 /#/logn地址  回到首页{push} 或者返回上一页
+情况二：打算进入个人中心/我的收藏/修改个人信息 
+           登录校验 
+           没有登录会先跳转到登录页[通过/？to=/xxx 传真实地址] 
+           登陆成功后要回到个人中心/...{replace}[获取to参数]
+情况三：在新闻详情页点击收藏时 
+           首先获取是否登录
+           已登录：收藏 
+           没有登陆：提示&跳转登录页[replace][/login?to=/detail/xxx] 
+           登录成功后获取to值跳转详情页{replace} 
+
+
+### 登录态检验
+进入/personal、/storer、/update 需要做登录态校验
+步骤：
+   获取redux中的base.info
+   有：登录
+   没有：派发一个任务，从服务器获取
+         获取到了：登录
+         没获取到：没有登录
+   登录：直接进入对应的组件
+   没有登录：跳转到登录页 ?to目标路由
+
+### /update 修改个人信息页
+进入个人修改信息页：
+先从redux中获取个人信息 绑定在表单中
+选择一张图片 他会把图片上传到服务器 服务器返回上传后的地址点击提交按钮 再把图片地址以及用户名传输给服务器进行修改
+
+##以下接口向服务器发送请求时，必须基于请求头传递token：
+    /user_info
+    /user_update
+    /store
+    /store_remove
+    /store_list
+
+##
+第一次渲染完毕：获取数据 设置监听器、定时器 获取dom元素 手动绑定事件 设置依赖 销毁监听器、定时器
+
+##
+基于数据控制元素显示隐藏：
+1.控制其是否渲染 v-if 不经常变换的用这个 可以优化性能
+     没有数据可以不渲染 结构中找不到也获取不了dom元素
+     有数据在渲染
+2.dispaly v-show 频繁切换使用这个
+     不管有没有数据 都渲染 可以获取dom元素
+    
+如果想获取dom元素 还不想让其展示 只能2
+
+##
+在组件释放的时候 react内部会移除:
+虚拟dom
+真实dom
+合成事件绑定
+
+不会移除：
+设置的定时器、监听器
+基于addEventlistener手动做的事件绑定 
+所以需要手动移除
+
+##
+我们想做UI组件库中Form表单的校验
+在Form.Item中基于rules设置校验规则
+1 内置
+2 自定义
+
+方案一:基于ref或者From.useForm获取Form的实例【或者是这个组件暴露的方法】
+自己基于JS执行相关方法:resetFields\vaildateFields
+
+方案二:触发Form的自动校验机制
+1 按钮 原生的type类型必须是 submit antd是基于nativeType设置  antd-mobile type
+2 按钮必须包含在Form中 包括用footer指定 这样点击按钮 会自动触发表单校验 成功:onFinsh 失败:onFinishFailed
+
+
+##富文本编辑器
+cmc内容管理系统-服务器-toc
+
+##
+在真实项目中，组件：
+1.普通业务组件 src/views
+2.通用业务组件 多个页面中使用的提取为公共的组件 src/components 保证更强的复用性
+3.通用功能组件 一般是UI组件 
+偶尔有UI组件中没有的或者不支持的 例如大文件上传和断点续传、影音类
+一般会二次封装 统一处理复杂的业务逻辑
+
+#项目优化 封装提取 测试 部署上线
+proxy做跨域代理 上传测试服务器没有 得用别的做反向代理
+
+#亮点
+业务逻辑@进入登录页情况
+技术难点
+细节
+项目封装优化
+
+#登录 账号验证码不跳转、
+点提交 传输手机号/验证码 成功：存储token（具备有效期的localstorage） 把当前的登陆者信息拿到 
+let { code, data } = await API.queryUserInfo();  拿到的是1和undefined
+应该是后端问题??
+
+
+#切换夜间模式
+reduc中定义一个夜间模式的全局状态，然后从 Redux 的状态中映射到组件的 props 中的 nightMode: state.base.nightMode
+还有把这个转给样式 nightMode={nightMode}

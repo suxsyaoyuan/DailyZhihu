@@ -1,0 +1,8 @@
+/* 统一管理派发的行为标识 */
+export const BASE_QUERY_USER_INFO = "BASE_QUERY_USER_INFO";
+export const BASE_REMOVE_USER_INFO = "BASE_REMOVE_USER_INFO";
+export const SET_NIGHT_MODE = "SET_NIGHT_MODE";
+
+export const COLLECT_QUERY = "COLLECT_QUERY";
+export const COLLECT_REMOVE = "COLLECT_REMOVE";
+export const COLLECT_CLEAR = "COLLECT_CLEAR";
